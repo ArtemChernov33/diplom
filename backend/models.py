@@ -140,6 +140,7 @@ class ProductInfo(models.Model):
     shop = models.ForeignKey(Shop, verbose_name='Магазин', related_name='product_infos', blank=True,
                              on_delete=models.CASCADE)
     price = models.PositiveIntegerField(verbose_name='Цена')
+    quantity = models.PositiveIntegerField(verbose_name='Количество', null=True)
     price_rrc = models.PositiveIntegerField(verbose_name='РРЦ')
 
     class Meta:
