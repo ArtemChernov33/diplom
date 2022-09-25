@@ -1,6 +1,8 @@
 # Create your views here.
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -10,24 +12,19 @@ from rest_framework.views import APIView
 from yaml import load as load_yaml, Loader
 
 
-from .models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter, User, ConfirmEmailToken
-from .serialazers import ShopSerializer, UserSerializer
+from .models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter, User, ConfirmEmailToken, Contact
+from .serialazers import ShopSerializer, UserSerializer, ContactSerializer
 from .signals import new_user_registered
 
 
 class RegisterAccount(APIView):
-    """
-    Для регистрации покупателей
-    """
-    # Регистрация методом POST
+    """Регистрация покупателей"""
     def post(self, request, *args, **kwargs):
 
         # проверяем обязательные аргументы
         if {'first_name', 'last_name', 'email', 'password', 'company', 'position'}.issubset(request.data):
             errors = {}
-
             # проверяем пароль на сложность
-
             try:
                 validate_password(request.data['password'])
             except Exception as password_error:
@@ -56,14 +53,10 @@ class RegisterAccount(APIView):
 
 
 class ConfirmAccount(APIView):
-    """
-    Класс для подтверждения почтового адреса
-    """
+    """Класс для подтверждения почтового адреса"""
     def post(self, request, *args, **kwargs):
-
         # проверяем обязательные аргументы
         if {'email', 'token'}.issubset(request.data):
-
             token = ConfirmEmailToken.objects.filter(user__email=request.data['email'],
                                                      key=request.data['token']).first()
             if token:
@@ -76,8 +69,120 @@ class ConfirmAccount(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
-class PartnerUpdate(APIView):
 
+class AccountDetails(APIView):
+    """
+    Класс для работы данными пользователя
+    """
+
+    # получить данные
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+    # Редактирование методом POST
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        # проверяем обязательные аргументы
+
+        if 'password' in request.data:
+            errors = {}
+            # проверяем пароль на сложность
+            try:
+                validate_password(request.data['password'])
+            except Exception as password_error:
+                error_array = []
+                # noinspection PyTypeChecker
+                for item in password_error:
+                    error_array.append(item)
+                return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
+            else:
+                request.user.set_password(request.data['password'])
+
+        # проверяем остальные данные
+        user_serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return JsonResponse({'Status': True})
+        else:
+            return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+
+
+class ContactView(APIView):
+    """Класс для работы с контактами покупателей"""
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        contact = Contact.objects.filter(
+            user_id=request.user.id)
+        serializer = ContactSerializer(contact, many=True)
+        return Response(serializer.data)
+
+    # добавить новый контакт
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if {'city', 'street', 'phone'}.issubset(request.data):
+            # request.data._mutable = True
+            request.data.update({'user': request.user.id})
+            serializer = ContactSerializer(data=request.data)
+
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse({'Status': True})
+            else:
+                JsonResponse({'Status': False, 'Errors': serializer.errors})
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+    # редактировать контакт
+    def put(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if 'id' in request.data:
+            if request.data['id'].isdigit():
+                contact = Contact.objects.filter(id=request.data['id'], user_id=request.user.id).first()
+                print(contact)
+                if contact:
+                    serializer = ContactSerializer(contact, data=request.data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return JsonResponse({'Status': True})
+                    else:
+                        JsonResponse({'Status': False, 'Errors': serializer.errors})
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+    # удалить контакт
+    def delete(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        items_sting = request.data.get('items')
+        if items_sting:
+            items_list = items_sting.split(',')
+            query = Q()
+            objects_deleted = False
+            for contact_id in items_list:
+                if contact_id.isdigit():
+                    query = query | Q(user_id=request.user.id, id=contact_id)
+                    objects_deleted = True
+
+            if objects_deleted:
+                deleted_count = Contact.objects.filter(query).delete()[0]
+                return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+
+class PartnerUpdate(APIView):
+    """Загрузка прайса """
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
