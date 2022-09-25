@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from yaml import load as load_yaml, Loader
 
 
-from .models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter, User
+from .models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter, User, ConfirmEmailToken
 from .serialazers import ShopSerializer, UserSerializer
 from .signals import new_user_registered
 
@@ -54,6 +54,28 @@ class RegisterAccount(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
+
+class ConfirmAccount(APIView):
+    """
+    Класс для подтверждения почтового адреса
+    """
+    def post(self, request, *args, **kwargs):
+
+        # проверяем обязательные аргументы
+        if {'email', 'token'}.issubset(request.data):
+
+            token = ConfirmEmailToken.objects.filter(user__email=request.data['email'],
+                                                     key=request.data['token']).first()
+            if token:
+                token.user.is_active = True
+                token.user.save()
+                token.delete()
+                return JsonResponse({'Status': True})
+            else:
+                return JsonResponse({'Status': False, 'Errors': 'Неправильно указан токен или email'})
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
 class PartnerUpdate(APIView):
 
     def post(self, request, *args, **kwargs):
@@ -94,6 +116,9 @@ class PartnerUpdate(APIView):
                                                         value=value)
                 return JsonResponse({'Status': True})
         return JsonResponse({'Status': False, "Errors": 'Не указаны необходимые аргументы'})
+
+
+
 
 
 class PartnerState(APIView):
