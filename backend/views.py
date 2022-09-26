@@ -2,18 +2,22 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.http import JsonResponse
 from requests import get
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from yaml import load as load_yaml, Loader
+from rest_framework.authtoken.models import Token
+from distutils.util import strtobool
 
 
 from .models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter, User, ConfirmEmailToken, Contact
-from .serialazers import ShopSerializer, UserSerializer, ContactSerializer
+from .serialazers import ShopSerializer, UserSerializer, ContactSerializer, CategorySerializer, ProductInfoSerializer
 from .signals import new_user_registered
 
 
@@ -49,7 +53,7 @@ class RegisterAccount(APIView):
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
 
 class ConfirmAccount(APIView):
@@ -65,10 +69,26 @@ class ConfirmAccount(APIView):
                 token.delete()
                 return JsonResponse({'Status': True})
             else:
-                return JsonResponse({'Status': False, 'Errors': 'Неправильно указан токен или email'})
+                return JsonResponse({'Status': False, 'Errors': 'Token and email are not correct'})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
+class LoginAccount(APIView):
+    """Класс для авторизации пользователей"""
+    def post(self, request, *args, **kwargs):
+
+        if {'email', 'password'}.issubset(request.data):
+            user = authenticate(request, username=request.data['email'], password=request.data['password'])
+
+            if user is not None:
+                if user.is_active:
+                    token, _ = Token.objects.get_or_create(user=user)
+
+                    return JsonResponse({'Status': True, 'Token': token.key})
+
+            return JsonResponse({'Status': False, 'Errors': 'Failed to login'})
+
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
 class AccountDetails(APIView):
     """
@@ -139,7 +159,7 @@ class ContactView(APIView):
             else:
                 JsonResponse({'Status': False, 'Errors': serializer.errors})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
     # редактировать контакт
     def put(self, request, *args, **kwargs):
@@ -158,7 +178,7 @@ class ContactView(APIView):
                     else:
                         JsonResponse({'Status': False, 'Errors': serializer.errors})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
     # удалить контакт
     def delete(self, request, *args, **kwargs):
@@ -177,8 +197,8 @@ class ContactView(APIView):
 
             if objects_deleted:
                 deleted_count = Contact.objects.filter(query).delete()[0]
-                return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+                return JsonResponse({'Status': True, 'Objects removed': deleted_count})
+        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
 
 class PartnerUpdate(APIView):
@@ -220,7 +240,7 @@ class PartnerUpdate(APIView):
                                                         parameter_id=parameter_object.id,
                                                         value=value)
                 return JsonResponse({'Status': True})
-        return JsonResponse({'Status': False, "Errors": 'Не указаны необходимые аргументы'})
+        return JsonResponse({'Status': False, "Errors": 'Not all the required are provided'})
 
 
 
@@ -238,17 +258,50 @@ class PartnerState(APIView):
         serializer = ShopSerializer(shop)
         return Response(serializer.data)
 
-    # def post(self, request, *args, **kwargs):
-    #     if not request.user.is_authenticated:
-    #         return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-    #     if request.user.type != 'shop':
-    #         return JsonResponse({'Status': False, 'Error': 'For shops only'}, status=403)
-    #
-    #     state = request.data.get('state')
-    #     if state:
-    #         try:
-    #             Shop.objects.filter(user_id=request.user.id).update(state=strtobool(state))
-    #             return JsonResponse({'Status': True, 'State': state})
-    #         except ValueError as error:
-    #             return JsonResponse({'Status': False, 'Errors': str(error)})
-    #     return JsonResponse({'Status': False, 'Error': 'Need new state'})
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'For shops only'}, status=403)
+
+        state = request.data.get('state')
+        if state:
+            try:
+                Shop.objects.filter(user_id=request.user.id).update(state=strtobool(state))
+                return JsonResponse({'Status': True, 'State': state})
+            except ValueError as error:
+                return JsonResponse({'Status': False, 'Errors': str(error)})
+        return JsonResponse({'Status': False, 'Error': 'Need new state'})
+
+class CategoryView(ListAPIView):
+    """Класс для просмотра категорий"""
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class ShopView(ListAPIView):
+    """Класс для просмотра списка магазинов"""
+    queryset = Shop.objects.filter(state=True)
+    serializer_class = ShopSerializer
+
+class ProductInfoView(APIView):
+    """Класс для поиска товаров"""
+    throttle_classes = (AnonRateThrottle,)
+    def get(self, request, *args, **kwargs):
+        query = Q(shop__state=True)
+        shop_id = request.query_params.get('shop_id')
+        category_id = request.query_params.get('category_id')
+
+        if shop_id:
+            query = query & Q(shop_id=shop_id)
+
+        if category_id:
+            query = query & Q(product__category_id=category_id)
+
+        # фильтруем и отбрасываем дупликаты
+        queryset = ProductInfo.objects.filter(
+            query).select_related(
+            'shop', 'product__category').prefetch_related(
+            'product_parameters__parameter').distinct()
+        serializer = ProductInfoSerializer(queryset, many=True)
+        return Response(serializer.data)
