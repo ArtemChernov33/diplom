@@ -26,9 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 class CategorySerializer(serializers.ModelSerializer):
-    model = Category
-    fields = ('id', 'name')
-    real_only_fields = ('id',)
+    class Meta:
+        model = Category
+        fields = ('id', 'name',)
+        real_only_fields = ('id',)
 
 class ProductSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField()
@@ -51,3 +52,27 @@ class ProductInfoSerializer(serializers.ModelSerializer):
         model = ProductInfo
         fields = ('id', 'model', 'product', 'shop', 'quantity', 'price', 'price_rrc', 'product_parameters')
         read_only_fields = ('id',)
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'quantity', 'order', 'product_info')
+        read_only_fields = ('id',)
+        extra_kwargs = {
+            'order': {'write_only': True}
+        }
+
+class OrderCreateItemSerializer(serializers.ModelSerializer):
+    product_info = ProductInfoSerializer(read_only=True)
+    class Meta:
+        model = OrderItem
+        fields = ('__all__')
+class OrderSerializer(serializers.ModelSerializer):
+    contact = ContactSerializer(read_only=True)
+    order_items = OrderCreateItemSerializer(read_only=True)
+    total_sum = serializers.IntegerField()
+    class Meta:
+        model = Order
+        fields = ('id', 'dt', 'state', 'contact', 'order_items', 'state', 'total_sum', )
+        read_only_fields = ('id',)
+
