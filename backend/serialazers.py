@@ -50,8 +50,9 @@ class ProductInfoSerializer(serializers.ModelSerializer):
     product_parameters = ProductParameterSerializer(read_only=True, many=True)
     class Meta:
         model = ProductInfo
-        fields = ('id', 'model', 'product', 'shop', 'quantity', 'price', 'price_rrc', 'product_parameters')
+        fields = ('id', 'model', 'product', 'shop', 'quantity', 'price', 'price_rrc', 'product_parameters',)
         read_only_fields = ('id',)
+        ordering = ['-id']
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,13 +67,15 @@ class OrderCreateItemSerializer(serializers.ModelSerializer):
     product_info = ProductInfoSerializer(read_only=True)
     class Meta:
         model = OrderItem
-        fields = ('__all__')
+        #fields = ('id', 'order', 'product_info', 'quantity')
+        fields = ("__all__")
+        #read_only_fields = ('id',)
 class OrderSerializer(serializers.ModelSerializer):
     contact = ContactSerializer(read_only=True)
     order_items = OrderCreateItemSerializer(read_only=True)
     total_sum = serializers.IntegerField()
     class Meta:
         model = Order
-        fields = ('id', 'dt', 'state', 'contact', 'order_items', 'state', 'total_sum', )
+        fields = ('id', 'dt', 'state', 'contact', 'order_items', 'total_sum', )
         read_only_fields = ('id',)
 

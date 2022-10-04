@@ -149,6 +149,7 @@ class ProductInfo(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
         ]
+        ordering = ('-id',)
 
 
 class Parameter(models.Model):
