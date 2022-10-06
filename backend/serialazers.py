@@ -1,6 +1,6 @@
 from rest_framework import serializers
-
 from .models import Contact, User, Category, Shop, Product, ProductParameter, ProductInfo, OrderItem, Order
+
 
 class ShopSerializer(serializers.ModelSerializer):
     class Meta:
@@ -78,4 +78,3 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'dt', 'state', 'contact', 'order_items', 'total_sum', )
         read_only_fields = ('id',)
-

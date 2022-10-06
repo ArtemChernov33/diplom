@@ -9,11 +9,14 @@ app_name = 'backend'
 product_info = ProductInfoViewSet.as_view({
     'get': 'product_info'
 })
+category = CategoryView.as_view({'get': 'category'})
 
 
 router = DefaultRouter()
 # router.register('partner/update', PartnerUpdate.as_view())
 router.register('products', ProductInfoViewSet, basename='product_info')
+router.register('categories', CategoryView, basename='category')
+
 
 
 
@@ -25,10 +28,11 @@ urlpatterns = [
     path('user/details', AccountDetails.as_view(), name='user-details'),
     path('user/contact', ContactView.as_view(), name='user-contact'),
     path('user/login', LoginAccount.as_view(), name='user-login'),
-    path('categories', CategoryView.as_view(), name='categories'), # Нужно доработать
+    # path('categories', CategoryView.as_view(), name='categories'), # Нужно доработать
     path('shop', ShopView.as_view(), name='shop'),
     # path('products', ProductInfoView.as_view(), name='products'),
     path('basket', BasketView.as_view(), name='basket'),
     path('order', OrderView.as_view(), name='order'),
     path('products', include(router.urls)),
+    path('categories', include(router.urls)),
 ]
