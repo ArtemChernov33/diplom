@@ -1,0 +1,178 @@
+API
+### Активные заказы поставщика
+GET http://127.0.0.1:8000/api/v1/partner/state
+Authorization: Token 20a4096771793fe71a0d4eeed536c35f9b1c4036
+Content-Type:application/json
+
+###
+POST http://127.0.0.1:8000/api/v1/partner/state
+Authorization: Token 20a4096771793fe71a0d4eeed536c35f9b1c4036
+Content-Type:application/json
+
+{
+  "state":"on"
+}
+
+### Загрузка прайса
+POST http://127.0.0.1:8000/api/v1/partner/update
+Authorization: Token 20a4096771793fe71a0d4eeed536c35f9b1c4036
+Content-Type:application/json
+
+{
+  "url": "https://raw.githubusercontent.com/mexalon/finproj/master/mymazon/data_for_ulpoad/shop1.yml" 
+}
+
+###
+# Создание пользователя
+POST http://127.0.0.1:8000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "first_name": "Артём",
+  "last_name": "Чернов",
+  "email": "art1310@mail.ru",
+  "password": "qwerty123ZZ",
+  "company": "MO RF",
+  "position": "ingenering"
+}
+
+### Подтверждение почтового адреса
+POST http://127.0.0.1:8000/api/v1/user/register/confirm
+Content-Type: application/json
+
+{
+  "email":"art1310@mail.ru",
+  "token":"87e6c0ef6feeeb8c8a"
+}
+
+### Авторизация пользователя
+POST http://127.0.0.1:8000/api/v1/user/login
+Content-Type: application/json
+
+# {
+#     "email":"svyaznoy@mail.ru",
+#     "password":"QAZwsxEDC321"
+# }
+
+{
+    "email": "art1310@mail.ru",
+    "password": "QAZwsxEDC321"
+}
+
+### Изменения данных пользователя
+POST http://127.0.0.1:8000/api/v1/user/details
+Content-Type: application/json
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+
+{
+        "first_name": "Artem",
+        "last_name": "Chernov",
+        "email": "art1310@mail.ru",
+        "password": "QAZwsxEDC321",
+        "company": "ST",
+        "position": "Директор",
+        "type" : "buyer"
+    }
+
+### Авторизация для изменения данных пользователя
+GET http://127.0.0.1:8000/api/v1/user/contact
+# Content-Type: application/json
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+
+###Добавление данных пользователя
+POST http://127.0.0.1:8000/api/v1/user/contact
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type: application/json
+
+{
+    "city": "Moscow",
+    "street": "Arbat",
+    "house": "11",
+    "structure": "10",
+    "building": "10",
+    "apartment": "10",
+    "phone": "696-27-57"
+}
+
+###Изменения данных пользователя
+PUT http://127.0.0.1:8000/api/v1/user/contact
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type: application/json
+
+{
+    "city": "Moscow",
+    "street": "Arbat",
+    "house": "19",
+    "structure": "1",
+    "building": "1",
+    "apartment": "1",
+    "phone": "696-27-37",
+    "id": "5"
+
+}
+
+###Удаление пользователя
+DELETE  http://127.0.0.1:8000/api/v1/user/contact
+Authorization: Token c1a80cca2e0cfd925258233ea3d0e89da88ae9be
+Content-Type: application/json
+
+{
+    "items": "3"
+}
+
+### Авторизация пользователя для работы с корзиной
+GET http://127.0.0.1:8000/api/v1/basket
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+### Добавление в корзину
+POST http://127.0.0.1:8000/api/v1/basket
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+ {
+    "items":
+      [
+        {"product_info": 8,
+        "quantity": 1}
+      ]
+  }
+### Изменение корзины
+PUT http://127.0.0.1:8000/api/v1/basket
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+ {
+   "items": 
+   [
+     {"id": 7, 
+     "quantity": 2},
+     {"id": 5, 
+     "quantity": 2}
+   ]
+   }
+
+### Удаление товаров из корзины
+DELETE http://127.0.0.1:8000/api/v1/basket
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+ {
+   "items": "7"
+  }
+
+### Авторизация пользователя для просмотра заказа
+GET http://127.0.0.1:8000/api/v1/order
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+### Добавление заказа
+POST http://127.0.0.1:8000/api/v1/order
+Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
+Content-Type:application/json
+
+{
+  "id": "7",
+  "status": "basket",
+  "contact" : 7
+}
