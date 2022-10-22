@@ -1,6 +1,7 @@
 # Create your views here.
 from distutils.util import strtobool
 from pprint import pprint
+import json
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -367,16 +368,17 @@ class BasketView(APIView):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         items_sting = request.data.get('items')
-        pprint(items_sting)
+
         if items_sting:
             try:
-                items_dict = load_json(items_sting)
+                items_dict = json.dumps(items_sting)
+                pprint(type(items_dict))
             except ValueError:
                 JsonResponse({'Status': False, 'Errors': 'Wrong format'})
             else:
                 basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
-                objects_created = 1
-                for order_item in items_dict:
+                objects_created = 0
+                for order_item in load_json(items_dict):
                     order_item.update({'order': basket.id})
                     serializer = OrderItemSerializer(data=order_item)
                     if serializer.is_valid():
@@ -396,6 +398,7 @@ class BasketView(APIView):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         items_sting = request.data.get('items')
+        print(items_sting)
         if items_sting:
             items_list = items_sting.split(',')
             basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
@@ -409,7 +412,7 @@ class BasketView(APIView):
             if objects_deleted:
                 deleted_count = OrderItem.objects.filter(query).delete()[0]
                 return JsonResponse({'Status': True, 'Delete items': deleted_count})
-        return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
+            return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})
 
     def put(self, request, *args, **kwargs):
         """Для редактирования корзины необходимо указать товары:
@@ -421,15 +424,16 @@ class BasketView(APIView):
         items_sting = request.data.get('items')
         if items_sting:
             try:
-                items_dict = load_json(items_sting)
+                items_dict = json.dumps(items_sting)
             except ValueError:
                 JsonResponse({'Status': False, 'Errors': 'Invalid format'})
             else:
                 basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
                 objects_updated = 0
-                for order_item in items_dict:
-                    if type(order_item['id']) == int and type(order_item['quantity']) == int:
-                        objects_updated += OrderItem.objects.filter(order_id=basket.id, id=order_item['id']).update(
+                for order_item in json.loads(items_dict):
+                    # if type(order_item['id']) == int and type(order_item['quantity']) == int:
+                    if isinstance(order_item['id'], int) and isinstance(order_item['quantity'], int):
+                        objects_updated += OrderItem.objects.filter(order_id=basket.id, product_info_id=order_item['id']).update(
                             quantity=order_item['quantity'])
                 return JsonResponse({'Status': True, 'Update items': objects_updated})
         return JsonResponse({'Status': False, 'Errors': 'Not all the required are provided'})

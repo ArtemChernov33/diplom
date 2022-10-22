@@ -134,9 +134,28 @@ Content-Type:application/json
     "items":
       [
         {"product_info": 8,
+        "quantity": 1},
+        {"product_info": 7,
         "quantity": 1}
       ]
   }
+
+
+# {
+#     "items":
+# [
+# 	{
+# 		"product_info":  8,
+# 		"quantity": 1
+		
+# 	},
+# 	{
+# 		"product_info":  7,
+# 		"quantity": 1,
+		
+# 	}
+# ]
+# }
 ### Изменение корзины
 PUT http://127.0.0.1:8000/api/v1/basket
 Authorization: Token 6635d17cee6f5d76c8f1041b76f3388475a3ec70
@@ -145,10 +164,10 @@ Content-Type:application/json
  {
    "items": 
    [
-     {"id": 7, 
-     "quantity": 2},
-     {"id": 5, 
-     "quantity": 2}
+     {"id": 8, 
+     "quantity": 7},
+    {"id": 7,
+    "quantity": 3}
    ]
    }
 
